@@ -1,7 +1,7 @@
 import * as fs from "fs";
 
 // @ts-ignore
-export const dataDir = fs.realpathSync(`${import.meta.dirname}/../../../data`);
+export const dataDir = fs.realpathSync(`${import.meta.dirname}/../../../data/04-documentation/w`);
 
 export const sleep = (ms: number) =>
   new Promise(res => setTimeout(res, ms));

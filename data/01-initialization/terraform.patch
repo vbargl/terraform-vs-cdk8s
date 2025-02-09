@@ -1,0 +1,43 @@
+diff --git a/src/terraform/providers.tf b/src/terraform/providers.tf
+new file mode 100644
+index 0000000..47320fa
+--- /dev/null
++++ b/src/terraform/providers.tf
+@@ -0,0 +1,22 @@
++terraform {
++  required_providers {
++    kubernetes = {
++      source  = "hashicorp/kubernetes"
++      version = "2.32.0"
++    }
++  }
++}
++
++provider "kubernetes" {
++  config_path = pathexpand(local.kubeconfig)
++}
++
++provider "helm" {
++  kubernetes {
++    config_path = pathexpand(local.kubeconfig)
++  }
++}
++
++provider "kustomization" {
++  kubeconfig_path = pathexpand(local.kubeconfig)
++}
+diff --git a/src/terraform/variables.tf b/src/terraform/variables.tf
+new file mode 100644
+index 0000000..a0096c7
+--- /dev/null
++++ b/src/terraform/variables.tf
+@@ -0,0 +1,8 @@
++variable "kubeconfig" {
++  description = "Path to the kubeconfig file"
++  default = "../../infrastructure/"
++}
++
++locals {
++  kubeconfig = abspath("${path.root}/${var.kubeconfig}")
++}
+\ No newline at end of file
