@@ -84,13 +84,12 @@ wc, awk, sed, time, html2markdown, git, tree-sitter
 5. Execution duration of applying changes provides a measurable assessment of the time required for modifications to take effect. This is evaluated by tracking the execution duration of relevant operations under controlled conditions. This contributes directly to answering Research Questions RQ1 and RQ2.
 6. Extensibility and modularity assess the ability of each tool to adapt to new requirements and integrate additional functionalities. This is evaluated by analyzing the structure and flexibility of the tool’s components, measuring the effort required to extend or modify its functionality. Methods used for this case study are incremental changes and cumulative changes. This approach contributes directly to answering Research Question RQ2.
 7. Rollback complexity evaluates the effort required to revert changes and restore the system to a previous stable state. This is measured by analyzing the number of steps, commands, and manual interventions needed to achieve a successful rollback. This approach provides insights into the efficiency of error recovery mechanisms and contributes directly to answering Research Questions RQ1 and RQ2.
-8. The feature set comparison evaluates the functional capabilities of each tool, assessing their strengths, limitations, and practical applicability. This analysis is presented in a structured table where each feature is listed alongside a description of its purpose or expected behavior. For each tool, the table indicates whether the feature is implemented and, if so, how it is realized in practice.
+8. Testability
+9. Licensing, Contribution and Popularity
 
 # Comparison results and interpretation
 
-## Tool comparison
-
-### Structure and Workflow
+## Structure and Workflow
 
 Terraform utilizes HashiCorp Configuration Language (HCL), which follows a declarative paradigm to define the desired infrastructure state. Unlike traditional programming languages, it lacks explicit control flow directives but allows looping and conditional logic through built-in properties available to all resources. Terraform's execution process occurs in two distinct phases: (1) Plan, where the tool compares the current state with the desired state and generates a set of optimized changes to be applied, and (2) Apply, which executes these changes directly on the Kubernetes cluster in a fault-tolerant manner. Fault tolerance in this context means that if a specific change fails, dependent changes are not executed, whereas independent changes continue to be applied. Changes that are successfully implemented are recorded, ensuring that they are not reapplied in subsequent executions.
 
@@ -98,7 +97,11 @@ In contrast, CDK8s adheres to the programming paradigm of the language in which 
 
 It is important to note that Kubernetes itself is inherently declarative, meaning that both Terraform and CDK8s ultimately rely on declarative principles to apply changes. However, a key difference lies in how these tools handle change ordering. Terraform explicitly determines and optimizes the order of resource application, ensuring dependencies are managed internally, whereas CDK8s defers this responsibility to Kubernetes, allowing the platform to handle the execution order of applied changes.
 
-### Documentation
+## Tool initialization
+
+## Application addition
+
+## Documentation
 
 Terraform provides extensive documentation through two primary sources: the Terraform official documentation (developer.hashicorp.com/terraform) and the Terraform Kubernetes provider documentation (registry.terraform.io/providers/hashicorp/kubernetes/latest/docs). Since Terraform interacts with multiple cloud and infrastructure providers, users must reference both general Terraform documentation and provider-specific documentation to fully understand its capabilities. This two-layered approach ensures comprehensive coverage but may require additional effort to navigate when managing Kubernetes resources.
 
@@ -108,19 +111,23 @@ CDK8s offers centralized and structured documentation at cdk8s.io/docs/latest, p
 
 Number reported by content.sh tool: 80090
 
-### Modularity
+## Execution duration
+
+## Extensibility and modularity
 
 Terraform achieves modularity through its module system, which enables the encapsulation of commonly used infrastructure resources into reusable components. A module acts as a self-contained unit that accepts input parameters and produces outputs, which can be scalars (integers, strings), arrays, objects, or even arrays of objects. One limitation observed is that default values defined within modules can only be overridden by consumers, restricting flexibility in dynamic naming conventions. This constraint often necessitates very complex workarounds.
 
 In contrast, CDK8s modularity is inherently based on standard programming practices, allowing developers to write modular code using classes, functions, and abstractions within their chosen programming language. Creating reusable components in CDK8s is as straightforward as defining a class or function that encapsulates a specific configuration, offering a flexible and intuitive approach to modular infrastructure management.
 
-### Testability
+## Rollback complexity
+
+## Testability
 
 Terraform offers robust testability through various mechanisms that ensure infrastructure configurations are validated before deployment. The terraform plan command provides a built-in preview of infrastructure changes, allowing users to identify unintended modifications before applying them. Additionally, Terraform supports unit and integration testing through third-party tools such as Terratest, which enables automated validation of infrastructure by provisioning real cloud resources and running assertions against them. Terraform lacks traditional unit testing capabilities, relying instead on integration and acceptance testing to validate infrastructure correctness. This makes Terraform suitable for end-to-end infrastructure verification, however, due to Terraform’s reliance on external cloud services, testing often requires a sandboxed environment or mocking strategies to avoid unintended costs and resource modifications.
 
 CDK8s enhances testability by leveraging the capabilities of general-purpose programming languages. Unlike traditional Kubernetes manifest files written in YAML, CDK8s allows for unit testing of infrastructure logic using standard software testing frameworks like Jest (for TypeScript) or Pytest (for Python). This enables developers to validate infrastructure constructs without deploying them to a live cluster. Additionally, CDK8s supports snapshot testing, where generated YAML manifests are compared against predefined templates to detect unintended changes. However, since CDK8s ultimately outputs YAML manifests that require manual or external validation within a Kubernetes environment, testing applied changes requires additional tools such as Kubernetes-native testing frameworks (e.g., KubeTest, Kuttl) or integration tests with live clusters. This makes CDK8s highly testable in terms of infrastructure logic validation, but testing its real-world application requires additional deployment and verification steps.
 
-### Licensing, Contribution and Popularity
+## Licensing, Contribution and Popularity
 
 Terraform is an open-source infrastructure-as-code tool originally licensed under MPL 2.0 but transitioned to BSL 1.1 in 2023, introducing restrictions on commercial usage. This change led to the development of OpenTofu, a fully open-source alternative. Despite licensing concerns, Terraform remains highly popular in enterprise environments, with extensive multi-cloud support and a large contributor base. However, the shift in licensing may impact future community-driven contributions.
 
