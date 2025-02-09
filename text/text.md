@@ -99,6 +99,13 @@ It is important to note that Kubernetes itself is inherently declarative, meanin
 
 ## Tool initialization
 
+cdk8s dokáže pracovat se 4 programovacími jazyky. Pro tuto studii jsem vybral typescript, protože cdk8s u všech jazyků na pozadí využívá typescriptovou implementaci jsii.
+
+incremental terraform: 30
+incremental cdk8s: 33358
+comulative terraform: 164
+comulative cdk8s: 177407
+
 ## Application addition
 
 ## Documentation

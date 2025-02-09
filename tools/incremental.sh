@@ -20,4 +20,4 @@ if [ "$SCOPE" != "terraform" ] && [ "$SCOPE" != "cdk8s" ]; then
   exit 1
 fi
 
-git diff --stat "$PROJECT_DIR/data/$SCOPE.patch"
+git apply --stat "$PROJECT_DIR/data/$DIR/$SCOPE.patch"
