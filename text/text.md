@@ -110,6 +110,9 @@ comulative cdk8s: 177407
 
 > TODO: CDK8s cannot remove resources
 
+Terraform comulative: 1580
+Terraform incremental: 305
+
 ## Extensibility and modularity
 
 Terraform achieves modularity through its module system, which enables the encapsulation of commonly used infrastructure resources into reusable components. A module acts as a self-contained unit that accepts input parameters and produces outputs, which can be scalars (integers, strings), arrays, objects, or even arrays of objects. One limitation observed is that default values defined within modules can only be overridden by consumers, restricting flexibility in dynamic naming conventions. This constraint often necessitates very complex workarounds.

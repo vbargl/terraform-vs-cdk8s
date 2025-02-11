@@ -1,0 +1,311 @@
+diff --git a/src/terraform/main.tf b/src/terraform/main.tf
+new file mode 100644
+index 0000000..83a169f
+--- /dev/null
++++ b/src/terraform/main.tf
+@@ -0,0 +1,305 @@
++resource "kubernetes_namespace" "whoami-example" {
++  metadata {
++    name = "whoami-example-app"
++  }
++}
++
++resource "kubernetes_service_v1" "whoami-example" {
++
++  metadata {
++    name      = "whoami-example-service"
++    namespace = kubernetes_namespace.whoami-example.metadata[0].name
++    labels = {
++      "app" = "whoami-example"
++    }
++  }
++  spec {
++    type = "ClusterIP"
++    selector = {
++      "app" = "whoami-example"
++    }
++    port {
++      port        = 80
++      target_port = "web"
++    }
++  }
++}
++
++resource "kubernetes_deployment_v1" "whoami-example" {
++  metadata {
++    name      = "whoami-example-deployment"
++    namespace = kubernetes_namespace.whoami-example.metadata[0].name
++    labels = {
++      "app" = "whoami-example"
++    }
++  }
++  spec {
++    replicas = 1
++    strategy {
++      type = "RollingUpdate"
++      rolling_update {
++        max_surge       = 1
++        max_unavailable = 0
++      }
++    }
++    selector {
++      match_labels = {
++        "app" = "whoami-example"
++      }
++    }
++    template {
++      metadata {
++        labels = {
++          "app" = "whoami-example"
++        }
++      }
++      spec {
++        container {
++          name  = "whoami-example"
++          image = "docker.io/traefik/whoami:v1.10.4"
++
++          port {
++            name           = "web"
++            container_port = 80
++          }
++        }
++      }
++    }
++  }
++
++}
++
++resource "kubernetes_namespace" "wordsmith-example" {
++  metadata {
++    name = "wordsmith-example-app"
++  }
++}
++
++resource "kubernetes_service_v1" "wordsmith-example-web" {
++  metadata {
++    name      = "wordsmith-example-web"
++    namespace = kubernetes_namespace.wordsmith-example.metadata[0].name
++    labels = {
++      app = "wordsmith-example"
++    }
++  }
++
++  spec {
++    type = "ClusterIP"
++    selector = {
++      app = "wordsmith-example"
++    }
++
++    port {
++      name        = "web"
++      port        = 80
++      target_port = "web"
++    }
++  }
++}
++
++resource "kubernetes_deployment_v1" "wordsmith-example-web" {
++  metadata {
++    name      = "wordsmith-example-web"
++    namespace = kubernetes_namespace.wordsmith-example.metadata[0].name
++    labels = {
++      app = "wordsmith-example"
++    }
++  }
++
++  spec {
++    replicas = 1
++
++    selector {
++      match_labels = {
++        app = "wordsmith-example"
++      }
++    }
++
++    template {
++      metadata {
++        labels = {
++          app = "wordsmith-example"
++        }
++      }
++
++      spec {
++        container {
++          name  = "wordsmith-example-web"
++          image = "ghcr.io/vbargl/wordsmith-web:v1.0.0"
++          env {
++            name  = "API_ADDRESS"
++            value = "${kubernetes_service_v1.wordsmith-example-api.metadata[0].name}:${kubernetes_service_v1.wordsmith-example-api.spec[0].port[1].port}"
++          }
++          port {
++            name           = "web"
++            container_port = 80
++          }
++        }
++      }
++    }
++  }
++}
++
++resource "kubernetes_service_v1" "wordsmith-example-api" {
++  metadata {
++    name      = "wordsmith-example-api"
++    namespace = kubernetes_namespace.wordsmith-example.metadata[0].name
++    labels = {
++      app = "wordsmith-example"
++    }
++  }
++
++  spec {
++    type = "ClusterIP"
++    selector = {
++      app = "wordsmith-example"
++    }
++
++    port {
++      name        = "api-80"
++      port        = 80
++      target_port = "api"
++    }
++
++    port {
++      name        = "api-8080"
++      port        = 8080
++      target_port = "api"
++    }
++  }
++
++}
++
++resource "kubernetes_deployment_v1" "wordsmith-example-api" {
++  metadata {
++    name      = "wordsmith-example-api"
++    namespace = kubernetes_namespace.wordsmith-example.metadata[0].name
++    labels = {
++      app = "whoami-example"
++    }
++  }
++
++  spec {
++    replicas = 1
++
++    selector {
++      match_labels = {
++        app = "whoami-example"
++      }
++    }
++
++    template {
++      metadata {
++        labels = {
++          app = "whoami-example"
++        }
++      }
++
++      spec {
++        container {
++          name  = "whoami-example-api"
++          image = "ghcr.io/vbargl/wordsmith-api:v1.0.0"
++          env {
++            name  = "DB_ADDRESS"
++            value = "${kubernetes_service_v1.wordsmith-example-db.metadata[0].name}:${kubernetes_service_v1.wordsmith-example-db.spec[0].port[0].port}"
++          }
++          port {
++            name           = "api"
++            container_port = 8080
++          }
++        }
++      }
++    }
++  }
++}
++
++resource "kubernetes_service_v1" "wordsmith-example-db" {
++  metadata {
++    name      = "wordsmith-example-db"
++    namespace = kubernetes_namespace.wordsmith-example.metadata[0].name
++    labels = {
++      app = "wordsmith-example"
++    }
++  }
++
++  spec {
++    selector = {
++      app = "wordsmith-example"
++    }
++
++    port {
++      name        = "postgres"
++      port        = 5432
++      target_port = "postgres"
++    }
++  }
++
++}
++
++resource "kubernetes_deployment_v1" "wordsmith-example-db" {
++  metadata {
++    name      = "wordsmith-example-db"
++    namespace = kubernetes_namespace.wordsmith-example.metadata[0].name
++    labels = {
++      app = "wordsmith-example"
++    }
++  }
++
++  spec {
++    replicas = 1
++
++    selector {
++      match_labels = {
++        app = "wordsmith-example"
++      }
++    }
++
++    template {
++      metadata {
++        labels = {
++          app = "wordsmith-example"
++        }
++      }
++
++      spec {
++        container {
++          name  = "wordsmith-example-db"
++          image = "postgres:10.0-alpine"
++
++          port {
++            name           = "postgres"
++            container_port = 5432
++          }
++
++          volume_mount {
++            name       = "wordsmith-example-db-schema"
++            mount_path = "/docker-entrypoint-initdb.d"
++          }
++        }
++
++        volume {
++          name = "wordsmith-example-db-schema"
++
++          config_map {
++            name = kubernetes_config_map_v1.wordsmith-example-db-schema.metadata[0].name
++          }
++        }
++      }
++    }
++  }
++}
++
++resource "kubernetes_config_map_v1" "wordsmith-example-db-schema" {
++  metadata {
++    name      = "wordsmith-example-db-schema"
++    namespace = kubernetes_namespace.wordsmith-example.metadata[0].name
++    labels = {
++      app = "wordsmith-example"
++    }
++  }
++
++  data = {
++    "init.sql" = file("../_common/wordsmith-db/init.sql")
++  }
++}
