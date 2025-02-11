@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -ex
+set -e
 
 PROJECT_DIR="$(realpath "$(dirname "$0")/..")"
 cd "$PROJECT_DIR"
