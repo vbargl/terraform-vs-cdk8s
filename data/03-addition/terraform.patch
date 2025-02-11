@@ -1,9 +1,9 @@
 diff --git a/src/terraform/main.tf b/src/terraform/main.tf
 new file mode 100644
-index 0000000..83a169f
+index 0000000..c4886b9
 --- /dev/null
 +++ b/src/terraform/main.tf
-@@ -0,0 +1,305 @@
+@@ -0,0 +1,321 @@
 +resource "kubernetes_namespace" "whoami-example" {
 +  metadata {
 +    name = "whoami-example-app"
@@ -86,14 +86,16 @@ index 0000000..83a169f
 +    name      = "wordsmith-example-web"
 +    namespace = kubernetes_namespace.wordsmith-example.metadata[0].name
 +    labels = {
-+      app = "wordsmith-example"
++      app   = "wordsmith-example"
++      scope = "wordsmith-web"
 +    }
 +  }
 +
 +  spec {
 +    type = "ClusterIP"
 +    selector = {
-+      app = "wordsmith-example"
++      app   = "wordsmith-example"
++      scope = "wordsmith-web"
 +    }
 +
 +    port {
@@ -109,7 +111,8 @@ index 0000000..83a169f
 +    name      = "wordsmith-example-web"
 +    namespace = kubernetes_namespace.wordsmith-example.metadata[0].name
 +    labels = {
-+      app = "wordsmith-example"
++      app   = "wordsmith-example"
++      scope = "wordsmith-web"
 +    }
 +  }
 +
@@ -118,14 +121,16 @@ index 0000000..83a169f
 +
 +    selector {
 +      match_labels = {
-+        app = "wordsmith-example"
++        app   = "wordsmith-example"
++        scope = "wordsmith-web"
 +      }
 +    }
 +
 +    template {
 +      metadata {
 +        labels = {
-+          app = "wordsmith-example"
++          app   = "wordsmith-example"
++          scope = "wordsmith-web"
 +        }
 +      }
 +
@@ -152,14 +157,16 @@ index 0000000..83a169f
 +    name      = "wordsmith-example-api"
 +    namespace = kubernetes_namespace.wordsmith-example.metadata[0].name
 +    labels = {
-+      app = "wordsmith-example"
++      app   = "wordsmith-example"
++      scope = "wordsmith-api"
 +    }
 +  }
 +
 +  spec {
 +    type = "ClusterIP"
 +    selector = {
-+      app = "wordsmith-example"
++      app   = "wordsmith-example"
++      scope = "wordsmith-api"
 +    }
 +
 +    port {
@@ -182,7 +189,8 @@ index 0000000..83a169f
 +    name      = "wordsmith-example-api"
 +    namespace = kubernetes_namespace.wordsmith-example.metadata[0].name
 +    labels = {
-+      app = "whoami-example"
++      app   = "wordsmith-example"
++      scope = "wordsmith-api"
 +    }
 +  }
 +
@@ -191,20 +199,22 @@ index 0000000..83a169f
 +
 +    selector {
 +      match_labels = {
-+        app = "whoami-example"
++        app   = "wordsmith-example"
++        scope = "wordsmith-api"
 +      }
 +    }
 +
 +    template {
 +      metadata {
 +        labels = {
-+          app = "whoami-example"
++          app   = "wordsmith-example"
++          scope = "wordsmith-api"
 +        }
 +      }
 +
 +      spec {
 +        container {
-+          name  = "whoami-example-api"
++          name  = "wordsmith-example-api"
 +          image = "ghcr.io/vbargl/wordsmith-api:v1.0.0"
 +          env {
 +            name  = "DB_ADDRESS"
@@ -225,13 +235,15 @@ index 0000000..83a169f
 +    name      = "wordsmith-example-db"
 +    namespace = kubernetes_namespace.wordsmith-example.metadata[0].name
 +    labels = {
-+      app = "wordsmith-example"
++      app   = "wordsmith-example"
++      scope = "wordsmith-db"
 +    }
 +  }
 +
 +  spec {
 +    selector = {
-+      app = "wordsmith-example"
++      app   = "wordsmith-example"
++      scope = "wordsmith-db"
 +    }
 +
 +    port {
@@ -248,7 +260,8 @@ index 0000000..83a169f
 +    name      = "wordsmith-example-db"
 +    namespace = kubernetes_namespace.wordsmith-example.metadata[0].name
 +    labels = {
-+      app = "wordsmith-example"
++      app   = "wordsmith-example"
++      scope = "wordsmith-db"
 +    }
 +  }
 +
@@ -257,14 +270,16 @@ index 0000000..83a169f
 +
 +    selector {
 +      match_labels = {
-+        app = "wordsmith-example"
++        app   = "wordsmith-example"
++        scope = "wordsmith-db"
 +      }
 +    }
 +
 +    template {
 +      metadata {
 +        labels = {
-+          app = "wordsmith-example"
++          app   = "wordsmith-example"
++          scope = "wordsmith-db"
 +        }
 +      }
 +
@@ -301,7 +316,8 @@ index 0000000..83a169f
 +    name      = "wordsmith-example-db-schema"
 +    namespace = kubernetes_namespace.wordsmith-example.metadata[0].name
 +    labels = {
-+      app = "wordsmith-example"
++      app   = "wordsmith-example"
++      scope = "wordsmith-db"
 +    }
 +  }
 +

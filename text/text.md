@@ -101,23 +101,26 @@ It is important to note that Kubernetes itself is inherently declarative, meanin
 
 cdk8s dokáže pracovat se 4 programovacími jazyky. Pro tuto studii jsem vybral typescript, protože cdk8s u všech jazyků na pozadí využívá typescriptovou implementaci jsii.
 
-incremental terraform: 30
-incremental cdk8s: 33358
-comulative terraform: 164
-comulative cdk8s: 177407
+Terraform incremental: 30
+Terraform comulative: 164
+CDK8s incremental: 33358
+CDK8s comulative: 177407
 
 ## Application addition
 
 > TODO: CDK8s cannot remove resources
 
+Terraform incremental: 321
 Terraform comulative: 1580
-Terraform incremental: 305
 
 ## Extensibility and modularity
 
 Terraform achieves modularity through its module system, which enables the encapsulation of commonly used infrastructure resources into reusable components. A module acts as a self-contained unit that accepts input parameters and produces outputs, which can be scalars (integers, strings), arrays, objects, or even arrays of objects. One limitation observed is that default values defined within modules can only be overridden by consumers, restricting flexibility in dynamic naming conventions. This constraint often necessitates very complex workarounds.
 
 In contrast, CDK8s modularity is inherently based on standard programming practices, allowing developers to write modular code using classes, functions, and abstractions within their chosen programming language. Creating reusable components in CDK8s is as straightforward as defining a class or function that encapsulates a specific configuration, offering a flexible and intuitive approach to modular infrastructure management.
+
+Terraform incremental: 758
+Terraform comulative: 2390
 
 ## Documentation
 
