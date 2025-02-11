@@ -80,9 +80,9 @@ wc, awk, sed, time, html2markdown, git, tree-sitter
 1. The first case study focuses on comparing the structure and workflow of Terraform and CDK8s by implementing a Kubernetes deployment using both tools. This study aims to provide a high-level understanding of each tool’s approach, examining how they define infrastructure and execute deployments.
 2. Tool initialization aims to provide a clearer understanding of the complexity associated with the initialization and configuration of each tool, offering a more detailed perspective on the setup process. To achieve this, two key methods were employed: incremental changes and cumulative changes. This analysis directly contributes to answering Research Questions RQ1 and RQ2.
 3. Application addition helps clarify the extent of changes required to achieve desired outcome of adding application into Kubernetes. Methods used in this case study are: incremental changes and cumulative change. This analysis directly contributes to answering Research Question RQ2.
-4. Documentation analysis provides insight into the completeness and depth of the information available for each tool. A web crawler method is used to collect data for this case study which contributes directly to answering Research Question RQ2.
-5. Execution duration of applying changes provides a measurable assessment of the time required for modifications to take effect. This is evaluated by tracking the execution duration of relevant operations under controlled conditions. This contributes directly to answering Research Questions RQ1 and RQ2.
-6. Extensibility and modularity assess the ability of each tool to adapt to new requirements and integrate additional functionalities. This is evaluated by analyzing the structure and flexibility of the tool’s components, measuring the effort required to extend or modify its functionality. Methods used for this case study are incremental changes and cumulative changes. This approach contributes directly to answering Research Question RQ2.
+4. Extensibility and modularity assess the ability of each tool to adapt to new requirements and integrate additional functionalities. This is evaluated by analyzing the structure and flexibility of the tool’s components, measuring the effort required to extend or modify its functionality. Methods used for this case study are incremental changes and cumulative changes. This approach contributes directly to answering Research Question RQ2.
+5. Documentation analysis provides insight into the completeness and depth of the information available for each tool. A web crawler method is used to collect data for this case study which contributes directly to answering Research Question RQ2.
+6. Execution duration of applying changes provides a measurable assessment of the time required for modifications to take effect. This is evaluated by tracking the execution duration of relevant operations under controlled conditions. This contributes directly to answering Research Questions RQ1 and RQ2.
 7. Rollback complexity evaluates the effort required to revert changes and restore the system to a previous stable state. This is measured by analyzing the number of steps, commands, and manual interventions needed to achieve a successful rollback. This approach provides insights into the efficiency of error recovery mechanisms and contributes directly to answering Research Questions RQ1 and RQ2.
 8. Testability
 9. Licensing, Contribution and Popularity
@@ -108,6 +108,14 @@ comulative cdk8s: 177407
 
 ## Application addition
 
+> TODO: CDK8s cannot remove resources
+
+## Extensibility and modularity
+
+Terraform achieves modularity through its module system, which enables the encapsulation of commonly used infrastructure resources into reusable components. A module acts as a self-contained unit that accepts input parameters and produces outputs, which can be scalars (integers, strings), arrays, objects, or even arrays of objects. One limitation observed is that default values defined within modules can only be overridden by consumers, restricting flexibility in dynamic naming conventions. This constraint often necessitates very complex workarounds.
+
+In contrast, CDK8s modularity is inherently based on standard programming practices, allowing developers to write modular code using classes, functions, and abstractions within their chosen programming language. Creating reusable components in CDK8s is as straightforward as defining a class or function that encapsulates a specific configuration, offering a flexible and intuitive approach to modular infrastructure management.
+
 ## Documentation
 
 Terraform provides extensive documentation through two primary sources: the Terraform official documentation (developer.hashicorp.com/terraform) and the Terraform Kubernetes provider documentation (registry.terraform.io/providers/hashicorp/kubernetes/latest/docs). Since Terraform interacts with multiple cloud and infrastructure providers, users must reference both general Terraform documentation and provider-specific documentation to fully understand its capabilities. This two-layered approach ensures comprehensive coverage but may require additional effort to navigate when managing Kubernetes resources.
@@ -119,12 +127,6 @@ CDK8s offers centralized and structured documentation at cdk8s.io/docs/latest, p
 Number reported by content.sh tool: 80090
 
 ## Execution duration
-
-## Extensibility and modularity
-
-Terraform achieves modularity through its module system, which enables the encapsulation of commonly used infrastructure resources into reusable components. A module acts as a self-contained unit that accepts input parameters and produces outputs, which can be scalars (integers, strings), arrays, objects, or even arrays of objects. One limitation observed is that default values defined within modules can only be overridden by consumers, restricting flexibility in dynamic naming conventions. This constraint often necessitates very complex workarounds.
-
-In contrast, CDK8s modularity is inherently based on standard programming practices, allowing developers to write modular code using classes, functions, and abstractions within their chosen programming language. Creating reusable components in CDK8s is as straightforward as defining a class or function that encapsulates a specific configuration, offering a flexible and intuitive approach to modular infrastructure management.
 
 ## Rollback complexity
 
