@@ -103,7 +103,7 @@ cdk8s dokáže pracovat se 4 programovacími jazyky. Pro tuto studii jsem vybral
 
 Terraform incremental: 30
 Terraform comulative: 164
-CDK8s incremental: 33358
+CDK8s incremental: 33357
 CDK8s comulative: 177402
 
 ## Application addition
