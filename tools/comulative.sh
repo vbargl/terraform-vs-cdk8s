@@ -10,7 +10,7 @@ SCOPE="$1"
 if [ "$SCOPE" = "terraform" ]; then
   tree-sitter parse $(find $PROJECT_DIR/src/$SCOPE -type f | grep -E ".*\.tf(vars)?$") | wc -l
 elif [ "$SCOPE" = "cdk8s" ]; then
-  tree-sitter parse $(find $PROJECT_DIR/src/$SCOPE -type f | grep -E -v 'node_modules|help|snap|dist|snapshots|gitignore') | wc -l
+  tree-sitter parse $(find $PROJECT_DIR/src/$SCOPE -type f | grep -E -v 'node_modules|help|snap|dist|snapshots|gitignore|prettierignore') | wc -l
 else
   echo "Usage: $0 <scope>"
   echo "  scope: terraform|cdk8s"
