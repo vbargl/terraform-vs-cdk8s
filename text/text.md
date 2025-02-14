@@ -136,8 +136,6 @@ CDK8s offers centralized and structured documentation at cdk8s.io/docs/latest, p
 
 Number reported by content.sh tool: 80090
 
-## Execution duration
-
 ## Rollback complexity
 
 ## Testability
