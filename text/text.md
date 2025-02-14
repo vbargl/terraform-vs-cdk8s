@@ -138,6 +138,19 @@ Number reported by content.sh tool: 80090
 
 ## Rollback complexity
 
+terraform:
+git revert <commits> / git reset --hard <commit>
+terraform plan+apply
+
+cdk8s:
+not easily achievable by default
+
+It would require either:
+
+- to track applied resources in inventory
+- applied resources with revision annotation.
+  then applied rollback and delete remnants found by specific revision annotation.
+
 ## Testability
 
 Terraform offers robust testability through various mechanisms that ensure infrastructure configurations are validated before deployment. The terraform plan command provides a built-in preview of infrastructure changes, allowing users to identify unintended modifications before applying them. Additionally, Terraform supports unit and integration testing through third-party tools such as Terratest, which enables automated validation of infrastructure by provisioning real cloud resources and running assertions against them. Terraform lacks traditional unit testing capabilities, relying instead on integration and acceptance testing to validate infrastructure correctness. This makes Terraform suitable for end-to-end infrastructure verification, however, due to Terraform’s reliance on external cloud services, testing often requires a sandboxed environment or mocking strategies to avoid unintended costs and resource modifications.
