@@ -1,0 +1,866 @@
+diff --git a/src/cdk8s/apps/whoami/index.ts b/src/cdk8s/apps/whoami/index.ts
+new file mode 100644
+index 0000000..f6545f6
+--- /dev/null
++++ b/src/cdk8s/apps/whoami/index.ts
+@@ -0,0 +1,77 @@
++import * as kplus from "cdk8s-plus-28";
++import * as configs from "../../defaults/configs";
++import { Construct } from "constructs";
++
++export interface Config extends configs.Config {
++  imageTag?: string;
++}
++
++export class WhoamiApp extends Construct {
++  readonly namespace: kplus.Namespace;
++  readonly service: kplus.Service;
++  private deployment: kplus.Deployment;
++
++  constructor(scope: Construct, id: string, config: Config) {
++    super(scope, id);
++
++    const prefix = "whoami";
++    const port = 80;
++    const { nameFunction, imageTag, resources, securityContext } =
++      configs.WithDefaults(config, { imageTag: "v1.10.4" });
++
++    this.namespace = new kplus.Namespace(
++      this,
++      nameFunction(prefix, "namespace"),
++    );
++
++    this.deployment = new kplus.Deployment(
++      this,
++      nameFunction(prefix, "deployment"),
++      {
++        metadata: {
++          namespace: this.namespace.name,
++          labels: config.labels,
++        },
++        replicas: 1,
++        strategy: kplus.DeploymentStrategy.rollingUpdate({
++          maxSurge: kplus.PercentOrAbsolute.absolute(1),
++          maxUnavailable: kplus.PercentOrAbsolute.absolute(0),
++        }),
++        containers: [
++          {
++            name: nameFunction(prefix, "container"),
++            image: `docker.io/traefik/whoami:${imageTag}`,
++            ports: [
++              {
++                name: "web",
++                number: port,
++              },
++            ],
++            securityContext,
++            resources,
++          },
++        ],
++      },
++    );
++
++    this.service = new kplus.Service(this, nameFunction(prefix, "service"), {
++      metadata: {
++        namespace: this.namespace.name,
++        labels: config.labels,
++      },
++
++      type: kplus.ServiceType.CLUSTER_IP,
++      selector: this.deployment,
++      ports: [
++        {
++          port: port,
++          targetPort: port,
++        },
++      ],
++    });
++  }
++
++  get address(): string {
++    return `${this.service.name}:${this.service.ports[0].port}`;
++  }
++}
+diff --git a/src/cdk8s/apps/wordsmith/api.ts b/src/cdk8s/apps/wordsmith/api.ts
+new file mode 100644
+index 0000000..bbffa4f
+--- /dev/null
++++ b/src/cdk8s/apps/wordsmith/api.ts
+@@ -0,0 +1,80 @@
++import * as kplus from "cdk8s-plus-28";
++import * as configs from "../../defaults/configs";
++import { Construct } from "constructs";
++import { WordsmithDbComponent } from "./db";
++import * as utils from "./utils";
++
++export interface Config extends configs.Config {
++  namespace: kplus.Namespace;
++  imageTag?: string;
++  dbComponent: WordsmithDbComponent;
++}
++
++export class WordsmithApiComponent extends Construct {
++  readonly service: kplus.Service;
++  private deployment: kplus.Deployment;
++
++  constructor(scope: Construct, id: string, config: Config) {
++    super(scope, id);
++
++    const prefix = "wordsmith-api";
++    const port = 8080;
++    const {
++      namespace,
++      dbComponent,
++      nameFunction,
++      imageTag,
++      labels,
++      resources,
++      securityContext,
++    } = configs.WithDefaults(config, { imageTag: "v1.0.0" });
++
++    this.deployment = new kplus.Deployment(
++      this,
++      nameFunction(prefix, "deployment"),
++      {
++        metadata: {
++          namespace: namespace.name,
++          labels: {
++            ...labels,
++            scope: prefix,
++          },
++        },
++        replicas: 1,
++        containers: [
++          {
++            name: nameFunction(prefix, "container"),
++            image: `ghcr.io/vbargl/wordsmith-api:${imageTag}`,
++            envVariables: {
++              DB_ADDRESS: {
++                value: dbComponent.address,
++              },
++            },
++            ports: [
++              {
++                name: "api",
++                number: port,
++              },
++            ],
++            securityContext,
++            resources,
++          },
++        ],
++      },
++    );
++
++    this.service = utils.createService({
++      self: this,
++      namespace,
++      deployment: this.deployment,
++      prefix,
++      nameFunction,
++      labels: labels,
++      port,
++    });
++  }
++
++  get address(): string {
++    return `${this.service.name}:${this.service.ports[0].port}`;
++  }
++}
+diff --git a/src/cdk8s/apps/wordsmith/db.ts b/src/cdk8s/apps/wordsmith/db.ts
+new file mode 100644
+index 0000000..64e17cc
+--- /dev/null
++++ b/src/cdk8s/apps/wordsmith/db.ts
+@@ -0,0 +1,100 @@
++import * as fs from "fs";
++import * as kplus from "cdk8s-plus-28";
++import * as configs from "../../defaults/configs";
++import { Construct } from "constructs";
++import { createService } from "./utils";
++
++export interface Config extends configs.Config {
++  namespace: kplus.Namespace;
++}
++
++export class WordsmithDbComponent extends Construct {
++  readonly service: kplus.Service;
++  private deployment: kplus.Deployment;
++  private schema: kplus.ConfigMap;
++  private volume: kplus.Volume;
++
++  constructor(scope: Construct, id: string, config: Config) {
++    super(scope, id);
++
++    const prefix = "wordsmith-db";
++    const port = 5432;
++    const { namespace, nameFunction, labels, resources, securityContext } =
++      configs.WithDefaults(config);
++
++    this.schema = new kplus.ConfigMap(
++      this,
++      nameFunction(`${prefix}-schema`, "configmap"),
++      {
++        metadata: {
++          namespace: namespace.name,
++          labels: {
++            ...labels,
++            scope: prefix,
++          },
++        },
++        data: {
++          "schema.sql": fs
++            .readFileSync("../_common/wordsmith-db/init.sql")
++            .toString(),
++        },
++      },
++    );
++
++    this.volume = kplus.Volume.fromConfigMap(
++      this,
++      nameFunction(`${prefix}-schema`, "volume"),
++      this.schema,
++    );
++
++    this.deployment = new kplus.Deployment(
++      this,
++      nameFunction(prefix, "deployment"),
++      {
++        metadata: {
++          namespace: namespace.name,
++          labels: {
++            ...labels,
++            scope: prefix,
++          },
++        },
++
++        replicas: 1,
++        containers: [
++          {
++            name: nameFunction(prefix, "container"),
++            image: "postgres:10.0-alpine",
++            ports: [
++              {
++                name: "postgres",
++                number: port,
++              },
++            ],
++            volumeMounts: [
++              {
++                volume: this.volume,
++                path: "/docker-entrypoint-initdb.d",
++              },
++            ],
++            securityContext,
++            resources,
++          },
++        ],
++      },
++    );
++
++    this.service = createService({
++      self: this,
++      namespace,
++      deployment: this.deployment,
++      prefix,
++      nameFunction,
++      labels,
++      port,
++    });
++  }
++
++  get address(): string {
++    return `${this.service.name}:${this.service.ports[0].port}`;
++  }
++}
+diff --git a/src/cdk8s/apps/wordsmith/index.ts b/src/cdk8s/apps/wordsmith/index.ts
+new file mode 100644
+index 0000000..0fe877e
+--- /dev/null
++++ b/src/cdk8s/apps/wordsmith/index.ts
+@@ -0,0 +1,74 @@
++import * as kplus from "cdk8s-plus-28";
++import * as configs from "../../defaults/configs";
++import { Construct } from "constructs";
++import { WordsmithDbComponent } from "./db";
++import { WordsmithApiComponent } from "./api";
++import { WordsmithWebComponent } from "./web";
++
++export interface Config extends configs.Config {
++  webImageTag?: string;
++  apiImageTag?: string;
++}
++
++export class WordsmithApp extends Construct {
++  private db: WordsmithDbComponent;
++  private api: WordsmithApiComponent;
++  private web: WordsmithWebComponent;
++
++  constructor(scope: Construct, id: string, config: Config) {
++    super(scope, id);
++
++    const prefix = "wordsmith";
++    const { nameFunction, apiImageTag, webImageTag } = configs.WithDefaults(
++      config,
++      {
++        apiImageTag: "v1.0.0",
++        webImageTag: "v1.0.0",
++      },
++    );
++
++    const namespace = new kplus.Namespace(
++      this,
++      nameFunction(prefix, "namespace"),
++    );
++
++    this.db = new WordsmithDbComponent(
++      this,
++      nameFunction("wordsmith-db", "component"),
++      {
++        ...config,
++        namespace,
++      },
++    );
++
++    this.api = new WordsmithApiComponent(
++      this,
++      nameFunction("wordsmith-api", "component"),
++      {
++        ...config,
++        namespace,
++        dbComponent: this.db,
++        imageTag: apiImageTag,
++      },
++    );
++
++    this.web = new WordsmithWebComponent(
++      this,
++      nameFunction("wordsmith-web", "component"),
++      {
++        ...config,
++        namespace,
++        apiComponent: this.api,
++        imageTag: webImageTag,
++      },
++    );
++  }
++
++  get apiAddress(): string {
++    return this.api.address;
++  }
++
++  get webAddress(): string {
++    return this.web.address;
++  }
++}
+diff --git a/src/cdk8s/apps/wordsmith/utils.ts b/src/cdk8s/apps/wordsmith/utils.ts
+new file mode 100644
+index 0000000..9b9c766
+--- /dev/null
++++ b/src/cdk8s/apps/wordsmith/utils.ts
+@@ -0,0 +1,39 @@
++import * as kplus from "cdk8s-plus-28";
++import { Construct } from "constructs";
++
++export interface CreateServiceProps {
++  self: Construct;
++  deployment: kplus.Deployment;
++  namespace: kplus.Namespace;
++  prefix: string;
++  nameFunction: (prefix: string, type: string) => string;
++  labels: Record<string, string>;
++  port: number;
++}
++
++export const createService = ({
++  self,
++  namespace,
++  deployment,
++  prefix,
++  nameFunction,
++  labels,
++  port,
++}: CreateServiceProps): kplus.Service =>
++  new kplus.Service(self, nameFunction(prefix, "service"), {
++    metadata: {
++      namespace: namespace.name,
++      labels: {
++        ...labels,
++        scope: prefix,
++      },
++    },
++    type: kplus.ServiceType.CLUSTER_IP,
++    selector: deployment,
++    ports: [
++      {
++        port: port,
++        targetPort: port,
++      },
++    ],
++  });
+diff --git a/src/cdk8s/apps/wordsmith/web.ts b/src/cdk8s/apps/wordsmith/web.ts
+new file mode 100644
+index 0000000..ca568f0
+--- /dev/null
++++ b/src/cdk8s/apps/wordsmith/web.ts
+@@ -0,0 +1,80 @@
++import * as kplus from "cdk8s-plus-28";
++import * as configs from "../../defaults/configs";
++import { Construct } from "constructs";
++import { WordsmithApiComponent } from "./api";
++import * as utils from "./utils";
++
++export interface Config extends configs.Config {
++  namespace: kplus.Namespace;
++  imageTag?: string;
++  apiComponent: WordsmithApiComponent;
++}
++
++export class WordsmithWebComponent extends Construct {
++  readonly service: kplus.Service;
++  private deployment: kplus.Deployment;
++
++  constructor(scope: Construct, id: string, config: Config) {
++    super(scope, id);
++
++    const prefix = "wordsmith-api";
++    const port = 80;
++    const {
++      namespace,
++      apiComponent,
++      nameFunction,
++      imageTag,
++      labels,
++      resources,
++      securityContext,
++    } = configs.WithDefaults(config, { imageTag: "v1.0.0" });
++
++    this.deployment = new kplus.Deployment(
++      this,
++      nameFunction(prefix, "deployment"),
++      {
++        metadata: {
++          namespace: namespace.name,
++          labels: {
++            ...labels,
++            scope: prefix,
++          },
++        },
++        replicas: 1,
++        containers: [
++          {
++            name: "wordsmith-example-web",
++            image: `ghcr.io/vbargl/wordsmith-web:${imageTag}`,
++            envVariables: {
++              API_ADDRESS: {
++                value: apiComponent.address,
++              },
++            },
++            ports: [
++              {
++                name: "web",
++                number: port,
++              },
++            ],
++            securityContext,
++            resources,
++          },
++        ],
++      },
++    );
++
++    this.service = utils.createService({
++      self: this,
++      namespace,
++      deployment: this.deployment,
++      prefix,
++      nameFunction,
++      labels: labels,
++      port,
++    });
++  }
++
++  get address(): string {
++    return `${this.service.name}:${this.service.ports[0].port}`;
++  }
++}
+diff --git a/src/cdk8s/defaults/configs.ts b/src/cdk8s/defaults/configs.ts
+new file mode 100644
+index 0000000..82ffafa
+--- /dev/null
++++ b/src/cdk8s/defaults/configs.ts
+@@ -0,0 +1,39 @@
++import * as kplus from "cdk8s-plus-28";
++import * as names from "./name";
++import * as limits from "./deployment";
++
++export interface Config {
++  nameFunction?: names.NameFunction;
++  labels: Record<string, string>;
++  securityContext?: kplus.ContainerSecurityContextProps;
++  resources?: kplus.ContainerResources;
++}
++
++export const WithDefaults = <C extends Partial<Config>, D extends Partial<C>>(
++  config: C,
++  defaults: D = {} as D,
++): C & D & Required<Config> => ({
++  ...config,
++  ...defaults,
++  nameFunction: v(
++    config.nameFunction,
++    defaults.nameFunction,
++    names.SimpleNameFunction,
++  ),
++  labels: v(config.labels, defaults.labels, {}),
++  securityContext: v(
++    config.securityContext,
++    defaults.securityContext,
++    limits.securityContext,
++  ),
++  resources: v(config.resources, defaults.resources, limits.resources),
++});
++
++function v<T>(...args: (T | undefined)[]): T {
++  for (const arg of args) {
++    if (arg !== undefined) {
++      return arg;
++    }
++  }
++  throw new Error("No value provided");
++}
+diff --git a/src/cdk8s/defaults/deployment.ts b/src/cdk8s/defaults/deployment.ts
+new file mode 100644
+index 0000000..81f0387
+--- /dev/null
++++ b/src/cdk8s/defaults/deployment.ts
+@@ -0,0 +1,24 @@
++import { Size } from "cdk8s";
++import {
++  ContainerResources,
++  ContainerSecurityContextProps,
++  Cpu,
++} from "cdk8s-plus-28";
++
++export const resources: ContainerResources = {
++  cpu: {
++    request: Cpu.millis(100),
++    limit: Cpu.millis(500),
++  },
++  memory: {
++    request: Size.mebibytes(64),
++    limit: Size.mebibytes(512),
++  },
++};
++
++export const securityContext: ContainerSecurityContextProps = {
++  ensureNonRoot: false,
++  privileged: true,
++  readOnlyRootFilesystem: false,
++  allowPrivilegeEscalation: true,
++};
+diff --git a/src/cdk8s/defaults/name.ts b/src/cdk8s/defaults/name.ts
+new file mode 100644
+index 0000000..bc647e0
+--- /dev/null
++++ b/src/cdk8s/defaults/name.ts
+@@ -0,0 +1,4 @@
++export type NameFunction = (defaultName: string, type: string) => string;
++
++export const SimpleNameFunction: NameFunction = (defaultName, type) =>
++  `${defaultName}-${type}`;
+diff --git a/src/cdk8s/main.ts b/src/cdk8s/main.ts
+index d16afb6..8d54e5e 100644
+--- a/src/cdk8s/main.ts
++++ b/src/cdk8s/main.ts
+@@ -1,282 +1,22 @@
+-import * as fs from "fs";
+ import { Construct } from "constructs";
+ import { App, Chart, ChartProps } from "cdk8s";
+-import {
+-  Deployment,
+-  Namespace,
+-  Service,
+-  ServiceType,
+-  DeploymentStrategy,
+-  PercentOrAbsolute,
+-  ConfigMap,
+-  Volume,
+-  ContainerSecurityContextProps,
+-  ContainerResources,
+-} from "cdk8s-plus-28";
++import { WhoamiApp } from "./apps/whoami";
++import { WordsmithApp } from "./apps/wordsmith";
+ 
+ export class MyChart extends Chart {
+   constructor(scope: Construct, id: string, props: ChartProps = {}) {
+     super(scope, id, props);
+ 
+-    const resources: ContainerResources = {
+-      cpu: {},
+-      memory: {},
+-    };
+-
+-    const securityContext: ContainerSecurityContextProps = {
+-      ensureNonRoot: false,
+-      privileged: true,
+-      readOnlyRootFilesystem: false,
+-      allowPrivilegeEscalation: true,
+-    };
+-
+-    const whoamiNamespace = new Namespace(this, "whoami-namespace", {
+-      metadata: {
+-        name: "whoami-example-app",
++    new WhoamiApp(this, "whoami-example", {
++      labels: {
++        app: "whoami-example",
+       },
+     });
+ 
+-    const deployment = new Deployment(this, "whoami-example-deployment", {
+-      metadata: {
+-        namespace: whoamiNamespace.name,
+-        labels: {
+-          app: "whoami-example",
+-        },
+-      },
+-      replicas: 1,
+-      strategy: DeploymentStrategy.rollingUpdate({
+-        maxSurge: PercentOrAbsolute.absolute(1),
+-        maxUnavailable: PercentOrAbsolute.absolute(0),
+-      }),
+-      containers: [
+-        {
+-          name: "whoami-example",
+-          image: "docker.io/traefik/whoami:v1.10.4",
+-          ports: [
+-            {
+-              name: "web",
+-              number: 80,
+-            },
+-          ],
+-          securityContext,
+-          resources,
+-        },
+-      ],
+-    });
+-
+-    new Service(this, "whoami-example-service", {
+-      metadata: {
+-        namespace: whoamiNamespace.name,
+-        labels: {
+-          app: "whoami-example",
+-        },
+-      },
+-
+-      type: ServiceType.CLUSTER_IP,
+-      selector: deployment,
+-      ports: [
+-        {
+-          port: 80,
+-          targetPort: 80,
+-        },
+-      ],
+-    });
+-
+-    const wordsmithNamespace = new Namespace(this, "wordsmith-example", {
+-      metadata: {
+-        name: "wordsmith-example-app",
+-      },
+-    });
+-
+-    const wordsmithDbSchema = new ConfigMap(
+-      this,
+-      "wordsmith-example-db-schema-configmap",
+-      {
+-        metadata: {
+-          namespace: wordsmithNamespace.name,
+-          labels: {
+-            app: "wordsmith-example",
+-            scope: "wordsmith-db",
+-          },
+-        },
+-        data: {
+-          "schema.sql": fs
+-            .readFileSync("../_common/wordsmith-db/init.sql")
+-            .toString(),
+-        },
+-      },
+-    );
+-
+-    const wordsmithDbVolume: Volume = Volume.fromConfigMap(
+-      this,
+-      "wordsmith-example-db-schema-volume",
+-      wordsmithDbSchema,
+-    );
+-
+-    const wordsmithDbDeployment = new Deployment(
+-      this,
+-      "wordsmith-example-db-deployment",
+-      {
+-        metadata: {
+-          namespace: wordsmithNamespace.name,
+-          labels: {
+-            app: "wordsmith-example-db",
+-            scope: "wordsmith-db",
+-          },
+-        },
+-
+-        replicas: 1,
+-        containers: [
+-          {
+-            name: "wordsmith-example-db",
+-            image: "postgres:10.0-alpine",
+-            ports: [
+-              {
+-                name: "postgres",
+-                number: 5432,
+-              },
+-            ],
+-            volumeMounts: [
+-              {
+-                volume: wordsmithDbVolume,
+-                path: "/docker-entrypoint-initdb.d",
+-              },
+-            ],
+-            securityContext,
+-            resources,
+-          },
+-        ],
+-      },
+-    );
+-
+-    const wordsmithDbService = new Service(
+-      this,
+-      "wordsmith-example-db-service",
+-      {
+-        metadata: {
+-          namespace: wordsmithNamespace.name,
+-          labels: {
+-            app: "wordsmith-example",
+-            scope: "wordsmith-db",
+-          },
+-        },
+-        type: ServiceType.CLUSTER_IP,
+-        selector: wordsmithDbDeployment,
+-        ports: [
+-          {
+-            port: 5432,
+-            targetPort: 5432,
+-          },
+-        ],
+-      },
+-    );
+-
+-    const wordsmithApiDeployment = new Deployment(
+-      this,
+-      "wordsmith-example-api-deployment",
+-      {
+-        metadata: {
+-          namespace: wordsmithNamespace.name,
+-          labels: {
+-            app: "wordsmith-example-api",
+-            scope: "wordsmith-api",
+-          },
+-        },
+-        replicas: 1,
+-        containers: [
+-          {
+-            name: "wordsmith-example-api",
+-            image: "ghcr.io/vbargl/wordsmith-api:v1.0.0",
+-            envVariables: {
+-              DB_ADDRESS: {
+-                value: `${wordsmithDbService.name}:${wordsmithDbService.ports[0].port}`,
+-              },
+-            },
+-            ports: [
+-              {
+-                name: "api",
+-                number: 8080,
+-              },
+-            ],
+-            securityContext,
+-            resources,
+-          },
+-        ],
+-      },
+-    );
+-
+-    const wordsmithApiService = new Service(
+-      this,
+-      "wordsmith-example-api-service",
+-      {
+-        metadata: {
+-          namespace: wordsmithNamespace.name,
+-          labels: {
+-            app: "wordsmith-example",
+-            scope: "wordsmith-api",
+-          },
+-        },
+-        type: ServiceType.CLUSTER_IP,
+-        selector: wordsmithApiDeployment,
+-        ports: [
+-          {
+-            port: 8080,
+-            targetPort: 8080,
+-          },
+-        ],
+-      },
+-    );
+-
+-    const wordsmithWebDeployment = new Deployment(
+-      this,
+-      "wordsmith-example-web-deployment",
+-      {
+-        metadata: {
+-          namespace: wordsmithNamespace.name,
+-          labels: {
+-            app: "wordsmith-example-web",
+-            scope: "wordsmith-web",
+-          },
+-        },
+-        replicas: 1,
+-        containers: [
+-          {
+-            name: "wordsmith-example-web",
+-            image: "ghcr.io/vbargl/wordsmith-web:v1.0.0",
+-            envVariables: {
+-              API_ADDRESS: {
+-                value: `${wordsmithApiService.name}:${wordsmithApiService.ports[0].port}`,
+-              },
+-            },
+-            ports: [
+-              {
+-                name: "web",
+-                number: 80,
+-              },
+-            ],
+-            securityContext,
+-            resources,
+-          },
+-        ],
+-      },
+-    );
+-
+-    new Service(this, "wordsmith-example-web-service", {
+-      metadata: {
+-        namespace: wordsmithNamespace.name,
+-        labels: {
+-          app: "wordsmith-example",
+-          scope: "wordsmith-web",
+-        },
++    new WordsmithApp(this, "wordsmith-example", {
++      labels: {
++        app: "wordsmith-example",
+       },
+-      type: ServiceType.CLUSTER_IP,
+-      selector: wordsmithWebDeployment,
+-      ports: [
+-        {
+-          port: 80,
+-          targetPort: 80,
+-        },
+-      ],
+     });
+   }
+ }

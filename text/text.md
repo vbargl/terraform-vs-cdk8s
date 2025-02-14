@@ -111,9 +111,9 @@ CDK8s tokens-count: 177402
 > TODO: CDK8s cannot remove resources
 
 Terraform changed-lines: 321
-Terraform tokens-count: 1580
+Terraform tokens-count: 1580 (+1416)
 cdk8s changed lines: 274
-cdk8s tree-sitter tokens: 177456
+cdk8s tree-sitter tokens: 177456 (+54)
 
 ## Extensibility and modularity
 
@@ -122,7 +122,9 @@ Terraform achieves modularity through its module system, which enables the encap
 In contrast, CDK8s modularity is inherently based on standard programming practices, allowing developers to write modular code using classes, functions, and abstractions within their chosen programming language. Creating reusable components in CDK8s is as straightforward as defining a class or function that encapsulates a specific configuration, offering a flexible and intuitive approach to modular infrastructure management.
 
 Terraform changed-lines: 758
-Terraform tokens-count: 2390
+Terraform tokens-count: 2390 (+810)
+cdk8s changed-lines: 793
+cdk8s tree-sitter tokens: 179695 (+2239)
 
 ## Documentation
 
