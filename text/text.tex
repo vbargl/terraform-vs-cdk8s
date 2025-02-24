@@ -1,0 +1,346 @@
+\documentclass{article}
+
+\usepackage[english]{babel}
+\usepackage[a4paper,top=2cm,bottom=2cm,left=3cm,right=3cm,marginparwidth=1.75cm]{geometry}
+
+% Useful packages
+\usepackage{amssymb}
+\usepackage{siunitx}
+\PassOptionsToPackage{hyphens}{url}\usepackage{hyperref}
+\usepackage{cleveref}
+\usepackage[utf8]{inputenc}
+\usepackage[right]{lineno}
+\usepackage{csquotes}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{adjustbox}
+\usepackage{array}
+\usepackage{url}
+\usepackage{titlesec}
+\usepackage{authblk}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{makecell}
+\renewcommand{\thetable}{\Roman{table}}
+
+% Define a new format for \subsection
+\titleformat{\subsection}
+  {\mdseries\itshape\large} % Medium series, italic shape, and large font size
+  {\thesubsection}{1em}{} % Numbering, spacing, and the section title itself
+
+% Harvard Citation Style
+\usepackage[style=authoryear,backend=biber,natbib=true,maxcitenames=2,uniquelist=false]{biblatex}
+\addbibresource{Bibliography.bib} % your .bib file
+
+% Customizing biblatex for Harvard style
+\DeclareNameAlias{sortname}{family-given}
+\DeclareNameAlias{default}{family-given}
+
+\renewbibmacro{in:}{}
+\DeclareFieldFormat[article]{title}{\mkbibquote{#1}\addcomma}
+\DeclareFieldFormat[book]{title}{\mkbibemph{#1}\addcomma}
+\DeclareFieldFormat[article]{journaltitle}{\iffieldundef{shortjournal}{\mkbibemph{#1}\addcomma}{\mkbibemph{\printfield{shortjournal}}\addcomma}}
+\DeclareFieldFormat{volume}{\bibstring{volume}~#1}
+\DeclareFieldFormat{number}{\bibstring{number}~#1}
+
+% Definitions for "Vol." and "No."
+\DefineBibliographyStrings{english}{
+  volume = {Vol.},
+  number = {No.}
+}
+
+% Formatting "et al." in italics followed by a comma
+\DefineBibliographyStrings{english}{
+  andothers = {\textit{et al.},}
+}
+
+\DeclareFieldFormat[article]{volume}{Vol. #1}
+\DeclareFieldFormat[article]{number}{No. #1}
+\DeclareFieldFormat{url}{\bibstring{available at}\addcolon\space\url{#1}}
+\DeclareFieldFormat{urldate}{\mkbibparens{accessed \addspace#1}}
+
+% Configure cleveref
+\crefformat{figure}{#2Figure~#1#3}
+\crefformat{table}{#2Table~#1#3}
+\crefformat{section}{#2Section~#1#3}
+
+% Front Matter
+\author[1]{Vojtěch Bargl} 
+
+\affil[1]{University of Tomáš Baťa, Faculty of Faculty of Applied Informatics, Zlín, Czechia}
+
+\title{A Comparison of Tools to Provision Infrastructure in Kubernetes: terraform vs cdk8s}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\textbf{Purpose} - This study compares two provision tools, terraform and cdk8s of Kubernetes cluster. It addresses a gap in the literature, offering new insights into scalability, maintainability, and feature sets, providing organizations with a clearer understanding of which tool best suits their Kubernetes infrastructure needs.
+
+\textbf{Methodology} - A mixed-methods approach is used, applying several case studies. Data was collected from infrastructure provisioning tasks performed with Terraform and CDK8s in a controlled Kubernetes environment and analyzed using Git change counters, Tree-Sitter token analysis and web crawling for documentation analysis.
+
+\textbf{Results and Findings} - The results show that imperative style of cdk8s exceeds possibilities of extensibility, but misses key features such as state management or rollback possibilities. These findings provide evidence that while CDK8s offers modularity through its imperative style, its lack of built-in state management and rollback functionality presents challenges, confirming that additional tools are necessary to achieve comprehensive infrastructure management.
+
+\textbf{Value} - This research provides novel insights into cdk8s tool, advancing current understanding of infrastructure provision.
+
+\textbf{Keywords:} terraform, cdk8s, kubernetes, infrastructure as code
+\end{abstract}
+
+\linenumbers
+
+\section{Introduction}
+\label{sec:introduction}
+
+% The \textcolor{teal}{\textit{Introduction}} provides background and context, emphasizing the relevance of the study. It identifies the research gap and outlines the objectives. The introduction also highlights the importance of the research for the field and presents the main thesis or hypothesis.
+
+Organizations are currently facing the challenge of effectively managing their infrastructure in the current fast-changing IT environment. Infrastructure as Code (IaC) has become a common practice for defining, deploying, and managing the infrastructure using code rather than configuring it manually. IaC improves efficiency, scalability, and reliability through automation of the setup and configuration process. It treats infrastructure the same as application code, hence ensuring consistency, reducing the chances of human error and improving on the operations. IaC is integral to the modern DevOps culture, and therefore, strong and effective tools are required to define and manage the infrastructure configurations efficiently.
+
+Kubernetes is a strong platform for running, scaling, and operating containerised applications, but declaring the infrastructure to manage it can be complicated. To this end, organizations adopt tools like Terraform or cdk8s (Cloud Development Kit for Kubernetes) to help simplify the management of the Kubernetes infrastructure while complying with the IaC paradigm.
+
+Terraform is one of the most popular tools used in the IaC domain today and is known for being versatile and having a wide range of ecosystems. It uses a declarative approach to allow users to define the infrastructure of an application on multiple cloud providers. Terraform provides a way to describe Kubernetes infrastructure along with other cloud resources using HCL (HashiCorp Language), thus making it suitable for managing multi-cloud and hybrid environments.
+
+On the other hand, cdk8s, an open-source product developed by AWS, enables the developers to write Kubernetes manifests in popular programming languages like TypeScript, Python, and Go, thus offering a more codified and extensible solution for defining Kubernetes configuration.
+
+The purpose of this study is to compare Terraform and cdk8s, and identify the similarities and differences between the two. It will also compare their effects on scalability, maintainability, and feature sets, which will assist organizations in identifying the most suitable tool for their Kubernetes infrastructure structure.
+
+
+\subsection{Literature Review}
+\label{sec:litreview}
+
+Terraform is a subject of a lot of studies. For example, Reza Faezi in his 2024 thesis examines the transition from Terraform to OpenTofu, highlighting that while both tools share foundational elements, the primary difference lies in their licensing: OpenTofu is entirely open source, unlike Terraform's new Business Source License (BSL). The study identifies migration challenges, such as dependency management and compatibility issues, and outlines strategies to address them, recommending a careful, incremental migration approach and emphasizing the importance of comprehensive testing and stakeholder engagement. \cite{lit-1}
+
+Another example can be the 2024 study by Frois and others in which they conduct a comparative analysis of Terraform and AWS Cloud Development Kit (CDK) in managing Infrastructure as Code (IaC). They evaluate both tools across four key aspects: abstraction capability, scalability, maintainability, and performance. The findings suggest that Terraform is better suited for experienced teams seeking rapid implementations, while AWS CDK is more appropriate for less experienced teams prioritizing resource efficiency during implementation. The study emphasizes the importance of selecting the appropriate tool based on the specific needs and expertise of the development team. \cite{lit-2}
+
+In a 2024 study, Venkat Marella explores the integration of DevOps methodologies with cloud management to enhance operational efficiency and agility in IT systems. The research provides a comprehensive overview of essential DevOps tools and technologies for managing cloud infrastructure, including monitoring systems, CI/CD pipelines, Infrastructure as Code (IaC) tools, and configuration management systems. A key focus is on addressing the limitations of current DevOps systems, such as the inability to support concurrent project development and deployment on shared operational infrastructure. The study proposes solutions to these challenges within Amazon Web Services (AWS) environments, aiming to improve deployment efficiency, reliability in software and infrastructure delivery, and security. Additionally, Marella presents a mathematical model to determine the optimal configuration for IT infrastructure, emphasizing the automation, scaling, and management of Kubernetes clusters using Terraform as an IaC tool. The paper highlights the benefits of using Terraform, including increased productivity, automation, scalability, and security, and compares its capabilities with other popular IaC tools and techniques. Furthermore, it examines how Terraform integrates with AWS services to streamline processes and reduce complexity, discussing trends and potential developments in combining Kubernetes and Terraform to enhance the management of cloud-native applications. \cite{lit-3}
+
+In a 2018 study, Rahman and others conduct a comprehensive analysis of Infrastructure as Code (IaC) scripts, focusing on the prevalence and characteristics of code smells within these scripts. The research reveals that code smells are common in IaC scripts and can lead to maintenance challenges and potential security vulnerabilities. The authors emphasize the importance of adhering to coding best practices and implementing regular code reviews to mitigate these issues, thereby enhancing the quality and reliability of infrastructure automation. \cite{lit-4}
+
+In the article "Simplifying your Kubernetes infrastructure with cdk8s," Shyam Mohan discusses how cdk8s transforms Kubernetes configuration into a developer-friendly experience by allowing the definition of Kubernetes applications using familiar programming languages like TypeScript, Python, or Java. This approach enhances type safety, code validation, and integrates seamlessly with Continuous Integration and Continuous Deployment (CI/CD) pipelines, thereby streamlining deployment workflows and improving maintainability. The article also explores real-world applications of cdk8s, such as orchestrating microservices architectures and managing stateful applications with persistent volumes. \cite{lit-5}
+
+\subsection{Research gap}
+\label{sec:researchgap}
+
+While both Terraform and cdk8s are widely used for infrastructure automation, there is a notable gap in comparative research analyzing their efficiency, scalability, and best use cases in Kubernetes environments. Existing studies primarily focus on Terraform’s declarative approach and its cloud-agnostic capabilities, while cdk8s is often discussed in the context of simplifying Kubernetes configurations using general-purpose programming languages. However, a direct, in-depth comparison of their real-world adoption for Kubernetes infrastructure remains largely unexplored. This gap highlights the need for further research to evaluate their strengths and limitations side by side, providing insights into their suitability for different operational requirements which this study aims to fill.
+
+\section{Research Question}
+\label{sec:research_question}
+% This section presents the specific research question(s) driving the study. Clearly formulated research questions guide the research methodology and are based on the identified gap in the literature. Examples:
+% \begin{enumerate}
+%     \item[Tst] What is the impact of [variable] on [outcome] in [specific context]?
+%     \item[Tst2] How does [specific method] improve [application] in [relevant field]?
+% \end{enumerate}
+
+To provide a clear direction for this research, the following key questions will be explored, focusing on the comparative aspects of Terraform and cdk8s:
+
+\begin{enumerate}[label={\textbf{RQ\theenumi}},leftmargin=1.5cm]
+\item What are key differences, similarities and limitations between Terraform and cdk8s?
+\item What are the scalability and maintenance challenges of using Terraform and cdk8s?
+\item What advantages and trade-offs in terms of flexibility, extensibility, and ecosystem support exist in the feature sets of Terraform and cdk8s?
+\end{enumerate}
+
+\section{Method}
+\label{sec:method}
+% The \textcolor{teal}{\textit{Methods}} section describes the research design, data collection, and analysis techniques used in detail. This section should be comprehensive enough to allow replication of the study. Cite relevant studies, such as \cite{fellows_research_2021}, and ensure all methodological choices are justified.
+
+This study employs a combination of structured methods and case studies to systematically analyze and compare the tools, ensuring a comprehensive evaluation that directly addresses the research questions. The methods used include incremental and tree-sitter tokens counter tracking, execution duration measurement, web crawling for documentation analysis, and rollback complexity assessment and feature set comparison, each providing quantitative and qualitative insights into different aspects of tool performance and usability. Additionally, case studies offer well-rounded validation by demonstrating how each tool functions in practical deployment scenarios. By integrating these approaches, the study ensures an objective and data-driven assessment, contributing directly to answering the research questions.
+
+\subsection{Tools}
+\label{sec:tools}
+
+To ensure a consistent comparison of these tools under identical conditions, supplementary tools were utilized or developed to facilitate the evaluation process. One such tool was related to Kubernetes, an industry-standard container orchestration platform widely used for automating the deployment, scaling, and management of containerized applications.
+
+\subsubsection{Kubernetes}
+\label{sec:kubernetes}
+
+Kubernetes is an open-source platform that automates the deployment, scaling, and management of containerized applications, streamlining operations for DevOps teams. Its architecture is based on a client-server model, comprising a control plane (master node) and worker nodes. The control plane manages the desired state of the cluster, while worker nodes run the actual applications. Key components include the API server, which processes REST requests; etcd, a distributed key-value store for configuration data; the scheduler, which assigns pods to nodes; and various controllers that maintain the cluster's desired state. Understanding these components and their interactions is crucial for effectively leveraging Kubernetes' capabilities. \cite{k8s-1} \cite{k8s-2}
+
+Kubernetes has become the de facto standard for container orchestration in enterprise environments due to its scalability, flexibility, and robust automation capabilities. Organizations leverage Kubernetes to manage microservices architectures, ensure high availability, and streamline DevOps workflows. It enables businesses to efficiently deploy workloads across hybrid and multi-cloud environments, reducing operational overhead while improving system reliability. \cite{k8s-5}
+
+Various Kubernetes distributions cater to different use cases, from large-scale production clusters to lightweight development environments. Among them:
+
+\begin{itemize}
+
+\item \textbf{Minikube} – A local Kubernetes solution often used for development and testing purposes. It allows developers to run a single-node Kubernetes cluster on a local machine, making it an ideal choice for prototyping and debugging Kubernetes applications. Minikube is a lightweight tool that enables developers to run a single-node Kubernetes cluster locally for testing and development. It supports various hypervisors and container runtimes, making it easy to simulate Kubernetes environments without requiring a full cloud setup. \cite{k8s-6} Minikube is ideal for experimenting with Kubernetes features, testing deployments, and learning cluster management in a simple, resource-efficient way. \cite{k8s-3}
+
+\item \textbf{k0s} – Alternative to Minikube is k0s, which is a lightweight, all-in-one Kubernetes distribution that simplifies cluster deployment and management by eliminating external dependencies. \cite{k8s-3} A lightweight, single-binary Kubernetes distribution designed for small clusters and edge computing scenarios. It simplifies deployment by reducing dependencies while maintaining full Kubernetes compatibility. \cite{k8s-4}
+
+\end{itemize}
+
+Minikube was utilized in this study as the Kubernetes environment for testing and evaluation.
+
+\subsubsection{Git changed lines counter}
+\label{sec:git-changed-lines-coutner}
+The presented script is a Bash utility developed for systematically applying infrastructure configuration changes to either Terraform or CDK8s projects. 
+
+The script enhances the consistency and repeatability of applying predefined configuration patches within a controlled experimental environment.
+It uses one of the patch files located in data directory to run \texttt{git apply --stat}. This command outputs statistics detailing the extent of modifications. 
+The script thus provides an automated, reproducible method to manage infrastructure code modifications for comparative analysis within the study.
+
+\subsubsection{Tree-sitter tokens counter}
+\label{sec:treesitter-tokens-counter}
+
+This study utilizes a custom Bash script to measure code complexity in Terraform and CDK8s projects by counting lines of code using the Tree-Sitter parsing library. The script dynamically identifies the project directory, filters relevant source files, and excludes non-essential files such as dependencies and build artifacts. For Terraform, the script parses .tf and .tfvars files, while for CDK8s, it processes source files excluding specified directories. The parsed output is then quantified using wc -l to provide an objective measurement of code size and complexity.
+
+The script leverages various Tree-Sitter grammar libraries to parse different languages and formats, including HCL, JSON, JavaScript, TypeScript, and YAML, ensuring accurate analysis across both tools. This automated approach allows the study to consistently compare the infrastructure definitions and code structures of Terraform and CDK8s, offering a reliable basis for assessing the complexity and maintainability of each tool’s configuration management approach.
+
+\subsubsection{Playwright content crawler}
+\label{sec:playwright-content-crawler}
+
+A custom web crawler, based on \texttt{Playwright}, is used to collect all relevant documentation links into files such as \texttt{terraform-links.txt}, \texttt{terraform\_k8s-links.txt}, and \texttt{cdk8s-links.txt}. Each link is then visited, converted to Markdown, and saved into corresponding content files like \texttt{terraform-content.md}, \texttt{terraform\_k8s-content.md}, and \texttt{cdk8s-content.md}. 
+
+Since Terraform relies on a separate Kubernetes provider rather than offering native Kubernetes support, two sets of documentation links (\texttt{terraform} and \texttt{terraform\_k8s}) are crawled and stored independently. This ensures a comprehensive analysis of Terraform’s functionality and documentation, covering both its core infrastructure definitions and its Kubernetes provider capabilities.
+
+After collecting the Markdown files, the script consolidates, sorts, and deduplicates the text before performing a total word count. This metric offers insight into each tool’s \emph{learning complexity}, with the assumption that larger documentation sets may indicate broader functionality or greater depth of required knowledge but also a steeper learning curve. By comparing word counts across these tools, the study estimates how extensive each documentation set is, thus contributing to the overall assessment of usability and maintainability.
+
+
+\subsection{Case studies}
+\begin{enumerate}
+
+\item \label{cs:workflow} The first case study focuses on comparing the \textbf{structure and workflow} of Terraform and cdk8s by implementing a Kubernetes deployment using both tools. This study aims to provide a high-level understanding of each tool’s approach, examining how they define infrastructure and execute deployments.
+
+\item \label{cs:init}  \textbf{Tool initialization} aims to provide a clearer understanding of the complexity associated with the initialization and configuration of each tool, offering a more detailed perspective on the setup process. To achieve this, two key methods were employed: git changed lines counter and tree-sitter tokens counter. This analysis directly contributes to answering Research Questions RQ1 and RQ2.
+
+\item \label{cs:app-add}  \textbf{Application addition} helps clarify the extent of changes required to achieve desired outcome of adding application into Kubernetes. Methods used in this case study are: git changed lines counter and tree-sitter tokens counter. This analysis directly contributes to answering Research Question RQ2.
+
+\item \label{cs:mod} \textbf{Extensibility and modularity} assess the ability of each tool to adapt to new requirements and integrate additional functionalities. This is evaluated by analyzing the structure and flexibility of the tool’s components, measuring the effort required to extend or modify its functionality. Methods used for this case study are git changed lines counter and tree-sitter tokens counter. This approach contributes directly to answering Research Question RQ2.
+
+\item \label{cs:doc} \textbf{Documentation analysis} provides insight into the completeness and depth of the information available for each tool. A web crawler method is used to collect data for this case study which contributes directly to answering Research Question RQ2.
+
+\item \label{cs:rollback} \textbf{Rollback complexity} evaluates the effort required to revert changes and restore the system to a previous stable state. This is measured by analyzing the number of steps, commands, and manual interventions needed to achieve a successful rollback. This approach provides insights into the efficiency of error recovery mechanisms and contributes directly to answering Research Questions RQ1 and RQ2.
+
+\item \label{cs:tests} \textbf{Testability} examines how well each tool supports testing infrastructure configurations before deployment. This includes assessing available testing frameworks, integration with CI/CD pipelines, and the ease of validating changes without affecting live environments. The analysis explores automated testing capabilities, such as unit tests for infrastructure code, and the presence of tools like linters or validators. This section measures the level of effort required to implement and maintain testing practices with each tool and contributes directly to answering Research Questions RQ1 and RQ2.
+
+\item \label{cs:usage} \textbf{Licensing, contribution and popularity} assess the open-source licensing models, community contributions, and overall adoption of each tool. This includes evaluating licensing terms, the frequency and quality of contributions from developers, and community engagement on platforms like GitHub, Stack Overflow, and official forums. The analysis also explores the availability of third-party resources, such as plugins, extensions, and learning materials, providing insights into long-term viability and support. This contributes directly to answering Research Question RQ1.
+
+\end{enumerate}
+
+\section{Results}
+\label{sec:results}
+% Present the key findings of your study in this section. The results should be clearly organized, often including tables and figures to help interpret the data (e.g., \cref{tab-II}). Statistical results, comparisons, and any notable patterns should be highlighted.
+
+\subsection{Structure and Workflow}
+Terraform utilizes HashiCorp Configuration Language (HCL), which follows a declarative paradigm to define the desired infrastructure state. Unlike traditional programming languages, it lacks explicit control flow directives but allows looping and conditional logic through built-in properties available to all resources. Terraform's execution process occurs in two distinct phases: (1) Plan, where the tool compares the current state with the desired state and generates a set of optimized changes to be applied, and (2) Apply, which executes these changes directly on the Kubernetes cluster in a fault-tolerant manner. Fault tolerance in this context means that if a specific change fails, dependent changes are not executed, whereas independent changes continue to be applied. Changes that are successfully implemented are recorded, ensuring that they are not reapplied in subsequent executions.
+
+In contrast, cdk8s adheres to the programming paradigm of the language in which it is implemented, defining infrastructure as a series of sequential instructions required to reach the desired state. Unlike Terraform, cdk8s is specifically designed for Kubernetes environments and its sole purpose is to generate Kubernetes manifests in YAML format. These manifests, which may consist of one or multiple YAML files, must then be applied to the Kubernetes cluster manually or through an external automation tool. cdk8s is officially supported by four programming languages (TypeScript, Python, Java, and Go), all backed by a JavaScript implementation, making TypeScript a natural choice for this study.
+
+Additionally, CDK8s lacks the capability to remove resources once they have been deployed. Unlike Terraform, which maintains a state file to track and manage infrastructure resources throughout their lifecycle, CDK8s only generates Kubernetes manifests and does not manage or track applied resources. As a result, any resource removal must be handled manually by the user or through additional tooling, adding complexity to resource lifecycle management in CDK8s-based workflows.
+
+It is important to note that Kubernetes itself is inherently declarative, meaning that both Terraform and cdk8s ultimately rely on declarative principles to apply changes. However, a key difference lies in how these tools handle change ordering. Terraform explicitly determines and optimizes the order of resource application, ensuring dependencies are managed internally, whereas cdk8s defers this responsibility to Kubernetes, allowing the platform to handle the execution order of applied changes.
+
+\subsection{Tool initialization}
+In the case of Terraform, the tool initialization process was relatively straightforward, with a total of 45 changed lines recorded using `tools/git-changed-lines-counter.sh` and 102 tokens counted via `tools/treesitter-tokens-counter`. Terraform's declarative syntax and modular structure contributed to its simplicity during initialization, as the tool provides built-in modules and numerous provider options. The incremental approach required minimal manual intervention, and tree-sitter tokens counter were easily managed due to Terraform’s clear state management and provider plugins, resulting in a lightweight setup with minimal code overhead.
+
+Conversely, cdk8s exhibited significantly higher complexity during initialization, with `tools/git-changed-lines-counter` totaling 33,474 and `tools/treesitter-tokens-counter` reaching 90312. The significantly higher complexity is largely attributed to the extensive boilerplate and generated code required for Kubernetes resource definitions. A substantial portion of the codebase comes from the automatically generated k8s.ts file (26,965 lines), which is essential for providing TypeScript bindings to Kubernetes APIs. Additionally, supporting configuration files such as package-lock.json (6,368 lines) further contribute to the overall code volume. The high number of lines and tokens is reflective of the setup overhead required by cdk8s, where much of the code is generated and managed by the tool itself to ensure comprehensive Kubernetes support.
+
+\begin{center}
+    \begin{tabular}{l | cc} 
+        & terraform & cdk8s \\
+        \hline
+        git-changed-lines-counter & 45 & 33 474 \\
+        treesitter-tokens-counter & 102 & 90 312 \\
+    \end{tabular} 
+\end{center}
+
+
+\subsection{Application addition}
+Two applications were deployed using both tools to evaluate the complexity of adding applications to a Kubernetes environment: whoami and wordsmith. The whoami application served as a minimal example of deploying a basic service without a database, while the wordsmith application, consisting of 3 components: web, API, and database; provided a more complex deployment scenario. This dual approach allowed for a comprehensive comparison of how each tool handles varying levels of application complexity.
+
+For Terraform, adding the applications resulted in 321 changed lines (all insertions) recorded with git-changed-lines-counter and an increase in tokens from 102 to 1739 (+1637) according to treesitter-tokens-counter. Terraform’s modular design and declarative syntax facilitated the addition of new resources, but the need to define each component explicitly contributed to the code increase. The wordsmith app, with its multiple interconnected services, required additional configuration files, networking definitions, and service bindings, which collectively expanded the codebase. Despite this, Terraform maintained a structured and relatively concise approach to managing complex application deployments.
+
+In contrast, cdk8s exhibited a different pattern during application addition. Although the total number of git-changed-lines-counter was 274 (273 insertions and 1 deletion), the increase in treesitter-tokens-counter was more substantial, growing by 637 tokens from 90,312 to 90,949. This increase is attributed to cdk8s’ object-oriented design and reusable constructs, which allowed most of the Kubernetes definitions to remain unchanged while introducing new application components. The previously generated k8s.ts file provided extensive Kubernetes API bindings, minimizing the need for additional boilerplate code when adding new applications. While the initial setup was code-heavy, the incremental addition of applications demonstrated cdk8s’ efficiency in managing complex Kubernetes deployments through code reuse and abstraction, though the token increase suggests the detailed configuration required for multi-component applications.
+
+\begin{center}
+    \begin{tabular}{l | cc} 
+        & terraform & cdk8s \\
+        \hline
+        git-changed-lines-counter & \makecell{321 \\ (321 insertions)} & \makecell{274 \\ (273 insertions, 1 deletion)} \\
+        treesitter-tokens-counter & 1 739 (+1637) & 90 949 (+637) \\
+    \end{tabular} 
+\end{center}
+
+\subsection{Extensibility and modularity}
+Terraform achieves modularity through its module system, which enables the encapsulation of commonly used infrastructure resources into reusable components. A module acts as a self-contained unit that accepts input parameters and produces outputs, which can be scalars (integers, strings), arrays, objects, or even arrays of objects. One limitation observed is that default values defined within modules can only be overridden by consumers, restricting flexibility in dynamic naming conventions. This constraint often necessitates very complex workarounds.
+
+cdk8s modularity is inherently based on standard programming practices, allowing developers to write modular code using classes, functions, and abstractions within their chosen programming language. Creating reusable components in cdk8s is as straightforward as defining a class or function that encapsulates a specific configuration, offering a flexible and intuitive approach to modular infrastructure management.
+
+\begin{center}
+    \begin{tabular}{l | cc} 
+        & terraform & cdk8s \\
+        \hline
+        git-changed-lines-counter & \makecell{742 \\ (450 insertions, 292 deletions)}  & \makecell{793 \\ (525 insertions, 268 deletions)}  \\
+        treesitter-tokens-counter & 2 389 (+650) & 92 176 (+1 227) \\
+    \end{tabular} 
+\end{center}
+
+\subsection{Documentation}
+Terraform provides extensive documentation through two primary sources: the Terraform official documentation (developer.hashicorp.com/terraform) and the Terraform Kubernetes provider documentation (registry.terraform.io/providers/hashicorp/kubernetes/latest/docs). Since Terraform interacts with multiple cloud and infrastructure providers, users must reference both general Terraform documentation and provider-specific documentation to fully understand its capabilities. This two-layered approach ensures comprehensive coverage but may require additional effort to navigate when managing Kubernetes resources.
+
+Cdk8s offers centralized and structured documentation at cdk8s.io/docs/latest, providing guidance on installation, API references, and best practices for defining Kubernetes manifests using supported programming languages. The documentation is concise and developer-friendly, focusing primarily on writing infrastructure as code rather than deep operational insights. While comprehensive for its purpose, cdk8s documentation is less extensive compared to Terraform due to its narrower scope and Kubernetes-only focus.
+
+\begin{center}
+    \begin{tabular}{l | cc} 
+        & terraform & cdk8s \\
+        \hline
+        words in documentation & 2 138 979 & 80 090 \\
+    \end{tabular} 
+\end{center}
+
+\subsection{Rollback complexity}
+Terraform offers relatively straightforward rollback capabilities by leveraging Git version control. Commands like `git revert` or `git reset --hard` can restore previous infrastructure configurations, followed by `terraform plan` and `terraform apply` to reapply the desired state. This approach ensures that infrastructure rollbacks are both efficient and reliable, utilizing Terraform’s built-in state management system.
+
+CDK8s does not provide built-in rollback functionality by default, making rollbacks more complex. Implementing rollback requires custom or third-party solution of tracking applied resources through an inventory system or using revision annotations on deployed resources. Rollbacks would involve reapplying a previous state and manually removing any remaining resources associated with a specific revision, adding additional overhead compared to Terraform’s simpler rollback process.
+
+\subsection{Testiability}
+Terraform offers robust testability through various mechanisms that ensure infrastructure configurations are validated before deployment. The terraform plan command provides a built-in preview of infrastructure changes, allowing users to identify unintended modifications before applying them. Additionally, Terraform supports unit and integration testing through third-party tools such as Terratest, which enables automated validation of infrastructure by provisioning real cloud resources and running assertions against them. Terraform lacks traditional unit testing capabilities, relying instead on integration and acceptance testing to validate infrastructure correctness. This makes Terraform suitable for end-to-end infrastructure verification, however, due to Terraform’s reliance on external cloud services, testing often requires a sandboxed environment or mocking strategies to avoid unintended costs and resource modifications.
+
+Cdk8s enhances testability by leveraging the capabilities of general-purpose programming languages. Unlike traditional Kubernetes manifest files written in YAML, cdk8s allows for unit testing of infrastructure logic using standard software testing frameworks like Jest (for TypeScript) or Pytest (for Python). This enables developers to validate infrastructure constructs without deploying them to a live cluster. Additionally, cdk8s supports snapshot testing, where generated YAML manifests are compared against predefined templates to detect unintended changes. However, since cdk8s ultimately outputs YAML manifests that require manual or external validation within a Kubernetes environment, testing applied changes requires additional tools such as Kubernetes-native testing frameworks (e.g., KubeTest, Kuttl) or integration tests with live clusters. This makes cdk8s highly testable in terms of infrastructure logic validation, but testing its real-world application requires additional deployment and verification steps.
+
+\subsection{Licensing, Contribution and Popularity}
+\label{sec:usage}
+
+Terraform is an open-source infrastructure-as-code tool originally licensed under MPL 2.0 but transitioned to BSL 1.1 in 2023, introducing restrictions on commercial usage. This change led to the development of OpenTofu, a fully open-source alternative. Despite licensing concerns, Terraform remains highly popular in enterprise environments, with extensive multi-cloud support and a large contributor base. However, the shift in licensing may impact future community-driven contributions.
+
+Cdk8s is an open-source framework developed by AWS, licensed under the Apache License 2.0, which allows unrestricted use, modification, and distribution. It has a growing but smaller community compared to Terraform, with contributions primarily from AWS and open-source developers. While cdk8s is gaining traction, its adoption remains niche, mainly among Kubernetes-focused teams looking for a programmatic approach to manifest generation.
+
+
+
+\section{Discussion}
+\label{sec:discussion}
+% In this section, interpret the findings in the context of the research questions. Compare the results with prior studies, discuss any unexpected outcomes, and address the broader implications for the field. Limitations and potential future research directions should also be included.
+
+The comparison between Terraform and CDK8s reveals significant differences in their approach to infrastructure management, affecting scalability and maintenance. Terraform’s declarative model with HashiCorp Configuration Language (HCL) offers structured state management through its Plan and Apply phases, ensuring optimized resource ordering and fault-tolerant deployments. In contrast, CDK8s uses an imperative programming model, allowing developers to define Kubernetes manifests in familiar languages like TypeScript and Python, but requiring manual application and lacking built-in state tracking and resource removal. Both tools rely on Kubernetes’ declarative nature for final deployment, but Terraform’s internal handling of dependencies simplifies complex infrastructure operations, whereas CDK8s delegates this responsibility to Kubernetes, potentially adding complexity at scale.
+
+From a scalability and maintenance perspective, Terraform’s modular system supports reusability and efficient scaling, though managing state files in large infrastructures can be challenging. CDK8s offers flexibility through code reuse and abstraction, but its higher initialization complexity due to boilerplate code impacts maintainability. Terraform’s built-in rollback capabilities via Git and its state system enhance maintainability, while CDK8s requires custom solutions for rollbacks, increasing operational overhead. For testing, Terraform relies on integration testing tools like Terratest, while CDK8s leverages standard language frameworks but often needs additional tools for deployment validation, influencing maintainability in large-scale Kubernetes environments.
+
+\section{Conclusion}
+\label{sec:conclusion}
+% Summarize the main contributions of the study. Restate the significance of the findings in relation to the research question, and provide final remarks on the implications and future research potential.
+
+This study provides a comprehensive comparison of Terraform and CDK8s for provisioning infrastructure in Kubernetes environments, highlighting their key differences, scalability challenges, and trade-offs in flexibility and ecosystem support. Terraform’s declarative model and state management system offer robust support for complex, multi-cloud deployments but introduce challenges in managing state files and handling large-scale infrastructures. In contrast, CDK8s leverages familiar programming languages for Kubernetes manifest generation, providing flexibility and modularity but requiring additional manual intervention for resource management and rollbacks.
+
+Both tools exhibit strengths and limitations that influence their suitability for different operational needs. Terraform’s modular design and extensive ecosystem make it ideal for teams managing diverse cloud environments, while CDK8s is better suited for Kubernetes-centric workflows where code reuse and abstraction are prioritized. Ultimately, the choice between these tools depends on an organization’s specific requirements for scalability, maintainability, and extensibility, with this study serving as a guide to inform that decision.
+
+\pagebreak
+
+% \textit{Acknowledgments} \\Mention all external funding sources.\\
+
+% \textit{Disclosure statement:} \\No potential conflict of interest is reported by the authors.
+
+\printbibliography
+\pagebreak
+
+\section{Appendices}
+\subsection{Appendix A: Project files}
+All project files are available at \texttt{https://github.com/vbargl/terraform-vs-cdk8s}
+
+\subsection{Appendix B: Tree-Sitter grammers}
+\begin{itemize}
+\item \texttt{https://github.com/tree-sitter-grammars/tree-sitter-hcl}
+\item \texttt{https://github.com/tree-sitter/tree-sitter-typescript}
+\item \texttt{https://github.com/tree-sitter/tree-sitter-javascript}
+\item \texttt{https://github.com/tree-sitter/tree-sitter-json}
+\item \texttt{https://github.com/tree-sitter-grammars/tree-sitter-yaml}
+\end{itemize}
+\pagebreak
+
+\end{document}
